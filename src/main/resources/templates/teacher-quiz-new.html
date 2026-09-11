@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>New Quiz/Poll - Lecture Recorder</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar('Teacher', ${teacher.fullName})}"></div>
+
+<div class="container">
+    <a th:href="@{/teacher/dashboard}" style="font-size:0.85rem;">&larr; Back to dashboard</a>
+    <div class="card">
+        <h2 th:text="'New Quiz / Poll — ' + ${recording.title}"></h2>
+
+        <form th:action="@{'/teacher/recordings/' + ${recording.id} + '/quizzes/create'}" method="post">
+            <label>Title</label>
+            <input type="text" name="title" required placeholder="e.g. Unit 3 Recap Quiz">
+
+            <label>Type</label>
+            <select name="poll">
+                <option value="false">Quiz (graded — has correct answers)</option>
+                <option value="true">Poll (opinion only — no right/wrong answer, anonymous results)</option>
+            </select>
+
+            <button type="submit">Create &amp; Add Questions</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

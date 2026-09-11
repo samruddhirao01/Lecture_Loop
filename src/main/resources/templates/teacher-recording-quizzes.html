@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Quizzes - Lecture Recorder</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar('Teacher', ${teacher.fullName})}"></div>
+
+<div class="container">
+    <a th:href="@{/teacher/dashboard}" style="font-size:0.85rem;">&larr; Back to dashboard</a>
+
+    <div class="card">
+        <h2 th:text="'Quizzes &amp; Polls — ' + ${recording.title}"></h2>
+        <a th:href="@{'/teacher/recordings/' + ${recording.id} + '/quizzes/new'}" class="btn" style="margin-bottom:14px; display:inline-block;">+ New Quiz / Poll</a>
+
+        <table>
+            <thead><tr><th>Title</th><th>Type</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="q : ${quizzes}">
+                <td th:text="${q.title}"></td>
+                <td th:text="${q.poll} ? 'Poll' : 'Quiz'"></td>
+                <td style="display:flex; gap:6px;">
+                    <a th:href="@{'/teacher/quizzes/' + ${q.id}}" class="btn btn-sm">Manage</a>
+                    <a th:href="@{'/teacher/quizzes/' + ${q.id} + '/results'}" class="btn btn-sm">Results</a>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(quizzes)}"><td colspan="3">No quizzes or polls yet for this recording.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

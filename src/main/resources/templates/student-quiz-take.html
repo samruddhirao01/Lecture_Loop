@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${quiz.title}">Quiz</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .question-block { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #eef0f4; }
+        .option-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .option-row input { width: auto; margin: 0; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar(${student.section.name}, ${student.fullName})}"></div>
+
+<div class="container">
+    <a th:href="@{/student/dashboard}" style="font-size:0.85rem;">&larr; Back to lectures</a>
+
+    <div class="card">
+        <h2 th:text="${quiz.title} + (${quiz.poll} ? ' (Poll)' : ' (Quiz)')"></h2>
+        <p class="hint" style="margin-top:-4px;" th:if="${quiz.poll}">Your response stays anonymous — only aggregate counts are shown.</p>
+        <p class="hint" style="margin-top:-4px;" th:unless="${quiz.poll}">You can attempt this only once — answer carefully.</p>
+
+        <form th:action="@{'/student/quizzes/' + ${quiz.id} + '/submit'}" method="post">
+            <div class="question-block" th:each="q, iter : ${questions}">
+                <strong th:text="${iter.count} + '. ' + ${q.questionText}"></strong>
+                <div style="margin-top:8px;">
+                    <div class="option-row">
+                        <input type="radio" th:name="'q_' + ${q.id}" value="1" th:id="'q' + ${q.id} + 'o1'" required>
+                        <label th:for="'q' + ${q.id} + 'o1'" style="font-weight:normal; margin:0;" th:text="${q.option1}"></label>
+                    </div>
+                    <div class="option-row">
+                        <input type="radio" th:name="'q_' + ${q.id}" value="2" th:id="'q' + ${q.id} + 'o2'">
+                        <label th:for="'q' + ${q.id} + 'o2'" style="font-weight:normal; margin:0;" th:text="${q.option2}"></label>
+                    </div>
+                    <div class="option-row" th:if="${q.option3 != null}">
+                        <input type="radio" th:name="'q_' + ${q.id}" value="3" th:id="'q' + ${q.id} + 'o3'">
+                        <label th:for="'q' + ${q.id} + 'o3'" style="font-weight:normal; margin:0;" th:text="${q.option3}"></label>
+                    </div>
+                    <div class="option-row" th:if="${q.option4 != null}">
+                        <input type="radio" th:name="'q_' + ${q.id}" value="4" th:id="'q' + ${q.id} + 'o4'">
+                        <label th:for="'q' + ${q.id} + 'o4'" style="font-weight:normal; margin:0;" th:text="${q.option4}"></label>
+                    </div>
+                </div>
+            </div>
+
+            <p th:if="${#lists.isEmpty(questions)}">The teacher hasn't added any questions yet.</p>
+            <button type="submit" th:if="${!#lists.isEmpty(questions)}">Submit</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

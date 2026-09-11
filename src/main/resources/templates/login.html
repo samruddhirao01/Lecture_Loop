@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Lecture Recorder</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="auth-wrapper">
+    <div class="auth-box">
+        <h1>Lecture Recorder</h1>
+        <p class="subtitle">Open-source lecture recording &amp; anonymous doubts</p>
+
+        <div th:if="${param.error}" class="error-msg">Invalid username or password.</div>
+        <div th:if="${param.expired}" class="error-msg">You were logged out because this account signed in elsewhere.</div>
+        <div th:if="${param.logout}" class="success-msg">You have been logged out.</div>
+        <div th:if="${param.registered}" class="success-msg">Registration submitted! An admin needs to verify your account before you can log in.</div>
+        <div th:if="${param.resetdone}" class="success-msg">Password reset successfully. Please log in.</div>
+
+        <form th:action="@{/login}" method="post">
+            <label>College ID / Username</label>
+            <input type="text" name="username" placeholder="e.g. admin" required>
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Password" required>
+
+            <button type="submit">Login</button>
+        </form>
+
+        <div class="switch">
+            New student? <a th:href="@{/register}">Register here</a>
+        </div>
+        <div class="switch">
+            <a th:href="@{/forgot-password}">Forgot password?</a>
+        </div>
+        <p class="hint" style="text-align:center; margin-top:16px;">Default admin (demo only): admin / admin123</p>
+    </div>
+</div>
+</body>
+</html>

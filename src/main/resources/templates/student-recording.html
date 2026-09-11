@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${recording.title}">Recording</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar(${student.section.name}, ${student.fullName})}"></div>
+
+<div class="container">
+    <a th:href="@{/student/dashboard}" style="font-size:0.85rem;">&larr; Back to lectures</a>
+
+    <div class="card">
+        <h2 th:text="${recording.title}"></h2>
+
+        <video id="player" controls th:src="@{'/uploads/' + ${recording.storedFileName}}"></video>
+
+        <div th:if="${param.tagged}" class="success-msg" style="margin-top:14px;">
+            Your doubt was tagged anonymously. Only your teacher can see who raised it — other students never can.
+        </div>
+
+        <div style="margin-top:16px; display:flex; gap:10px;">
+            <button type="button" onclick="openTagBox()">🚩 I'm confused at this point</button>
+            <button type="button" onclick="openBookmarkBox()">🔖 Bookmark this moment</button>
+        </div>
+
+        <form id="tagForm" th:action="@{'/student/recordings/' + ${recording.id} + '/doubt'}" method="post" style="display:none; margin-top:14px;">
+            <input type="hidden" name="timestampSeconds" id="timestampSeconds" value="0">
+            <label>What's unclear here? (optional, stays anonymous to other students)</label>
+            <textarea name="comment" rows="2" placeholder="e.g. Didn't follow the formula step"></textarea>
+            <button type="submit">Submit Tag</button>
+        </form>
+
+        <form id="bookmarkForm" th:action="@{'/student/recordings/' + ${recording.id} + '/bookmark'}" method="post" style="display:none; margin-top:14px;">
+            <input type="hidden" name="timestampSeconds" id="bookmarkTimestampSeconds" value="0">
+            <label>Note for yourself (optional — only you will ever see this)</label>
+            <textarea name="note" rows="2" placeholder="e.g. Revisit this formula before the exam"></textarea>
+            <button type="submit">Save Bookmark</button>
+        </form>
+
+        <p class="hint" style="margin-top:14px;">Your name is never shown to other students. Only your teacher can see who raised a doubt.</p>
+    </div>
+
+    <div class="card">
+        <h2>My Bookmarks</h2>
+        <p class="hint" style="margin-top:-4px;">Private to you — not visible to anyone else, not even your teacher.</p>
+
+        <div th:if="${param.bookmarked}" class="success-msg">Bookmark saved.</div>
+
+        <table>
+            <thead><tr><th>Time</th><th>Note</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="b : ${bookmarks}">
+                <td>
+                    <a href="#" th:onclick="'jumpTo(' + ${b.timestampSeconds} + '); return false;'"
+                       th:text="${#numbers.formatInteger(b.timestampSeconds / 60, 1) + ':' + #numbers.formatInteger(b.timestampSeconds % 60, 2)}"></a>
+                </td>
+                <td th:text="${b.note != null and !b.note.isEmpty()} ? ${b.note} : '—'"></td>
+                <td>
+                    <form th:action="@{'/student/bookmarks/' + ${b.id} + '/delete'}" method="post" style="margin:0;">
+                        <input type="hidden" name="recordingId" th:value="${recording.id}">
+                        <button type="submit" class="btn-danger btn-sm">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(bookmarks)}"><td colspan="3">No bookmarks yet — save a moment to revisit later.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" th:if="${!#lists.isEmpty(quizzes)}">
+        <h2>Quizzes &amp; Polls</h2>
+        <table>
+            <thead><tr><th>Title</th><th>Type</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="q : ${quizzes}">
+                <td th:text="${q.title}"></td>
+                <td th:text="${q.poll} ? 'Poll' : 'Quiz'"></td>
+                <td>
+                    <a th:href="@{'/student/quizzes/' + ${q.id}}" class="btn btn-sm"
+                       th:text="${attempted.get(q.id)} ? 'View Result' : (${q.poll} ? 'Vote' : 'Attempt')"></a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Confusing Points Marked by the Class</h2>
+        <p class="hint" style="margin-top:-4px;">Shown anonymously — just where in the lecture other students got confused.</p>
+        <div class="marker-list">
+            <span th:each="m : ${markers}"
+                  th:class="${m.hot()} ? 'marker hot' : 'marker'"
+                  th:text="(${m.hot()} ? '🔥 ' : '') + #numbers.formatInteger(m.bucketStartSeconds() / 60, 1) + ':' + #numbers.formatInteger(m.bucketStartSeconds() % 60, 2) + ' (' + ${m.count()} + ')'">
+            </span>
+            <span th:if="${#lists.isEmpty(markers)}" class="hint">No one has tagged a confusing point yet.</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTagBox() {
+        var video = document.getElementById('player');
+        document.getElementById('timestampSeconds').value = Math.floor(video.currentTime || 0);
+        document.getElementById('tagForm').style.display = 'block';
+    }
+    function openBookmarkBox() {
+        var video = document.getElementById('player');
+        document.getElementById('bookmarkTimestampSeconds').value = Math.floor(video.currentTime || 0);
+        document.getElementById('bookmarkForm').style.display = 'block';
+    }
+    function jumpTo(seconds) {
+        var video = document.getElementById('player');
+        video.currentTime = seconds;
+        video.play();
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Dashboard - Lecture Recorder</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar(${student.section.name}, ${student.fullName})}"></div>
+
+<div class="container">
+    <div class="card">
+        <h2 th:text="'Lectures — ' + ${student.section.name}"></h2>
+        <table>
+            <thead><tr><th>Title</th><th>Uploaded</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="r : ${recordings}">
+                <td th:text="${r.title}"></td>
+                <td th:text="${#temporals.format(r.uploadedAt, 'dd MMM yyyy, HH:mm')}"></td>
+                <td><a th:href="@{'/student/recordings/' + ${r.id}}" class="btn btn-sm">Watch</a></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(recordings)}"><td colspan="3">No lectures uploaded for your section yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
