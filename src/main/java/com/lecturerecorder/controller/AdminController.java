@@ -26,9 +26,9 @@ public class AdminController {
     private final PollVoteRepository pollVoteRepository;
 
     public AdminController(UserRepository userRepository, SectionRepository sectionRepository,
-                           LectureRepository lectureRepository, BookmarkRepository bookmarkRepository,
-                           DoubtRepository doubtRepository, QuizAttemptRepository quizAttemptRepository,
-                           PollVoteRepository pollVoteRepository) {
+                            LectureRepository lectureRepository, BookmarkRepository bookmarkRepository,
+                            DoubtRepository doubtRepository, QuizAttemptRepository quizAttemptRepository,
+                            PollVoteRepository pollVoteRepository) {
         this.userRepository = userRepository;
         this.sectionRepository = sectionRepository;
         this.lectureRepository = lectureRepository;
