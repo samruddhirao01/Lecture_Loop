@@ -1,7 +1,7 @@
 package com.lecturerecorder.model;
 
 import jakarta.persistence.*;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -12,26 +12,17 @@ public class Section {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // e.g. "FY-A", "SY-B", "TY-A" -- admin can name these however the college needs
     @Column(nullable = false, unique = true)
-    private String name; // e.g. TY-A, SY-B, FY-A
+    private String name;
 
-    // A class can have many teachers, and a teacher can teach many classes.
-    // EAGER keeps the assigned-teacher list available to the Thymeleaf admin page
-    // because this project intentionally uses spring.jpa.open-in-view=false.
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany
     @JoinTable(
-            name = "section_teachers",
+            name = "teacher_sections",
             joinColumns = @JoinColumn(name = "section_id"),
-            inverseJoinColumns = @JoinColumn(name = "teacher_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"section_id", "teacher_id"})
+            inverseJoinColumns = @JoinColumn(name = "teacher_id")
     )
-    private Set<User> teachers = new LinkedHashSet<>();
-
-    // Kept for compatibility with older H2 databases created by previous versions.
-    // New assignments use the many-to-many teachers collection above.
-    @ManyToOne
-    @JoinColumn(name = "teacher_id")
-    private User teacher;
+    private Set<User> teachers = new HashSet<>();
 
     public Section() {}
 
@@ -47,7 +38,4 @@ public class Section {
 
     public Set<User> getTeachers() { return teachers; }
     public void setTeachers(Set<User> teachers) { this.teachers = teachers; }
-
-    public User getTeacher() { return teacher; }
-    public void setTeacher(User teacher) { this.teacher = teacher; }
 }

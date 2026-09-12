@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Dashboard - Lecture Recorder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        if (localStorage.getItem('lr-theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+</head>
+<body>
+    <div class="topbar">
+        <h1>Student Dashboard <span class="badge">STUDENT</span></h1>
+        <div>
+            <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>My Section's Lectures</h2>
+            <table id="lecturesTable">
+                <thead><tr><th>Title</th><th>Uploaded</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card" id="playerCard" style="display:none;">
+            <h2 id="playerTitle"></h2>
+            <video id="player" controls></video>
+
+            <div class="heatmap-wrap">
+                <div class="heatmap-label">Where the class got confused (click the graph to jump there)</div>
+                <div id="heatmapBar"></div>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Ask a doubt (anonymous, at the current timestamp)</label>
+                    <textarea id="doubtText" rows="2" placeholder="What are you confused about?"></textarea>
+                    <button class="primary" onclick="postDoubt()">Post Doubt Anonymously</button>
+                </div>
+                <div style="flex:1;">
+                    <label>Bookmark this moment (private, only you see it)</label>
+                    <textarea id="bookmarkNote" rows="2" placeholder="Optional note to yourself"></textarea>
+                    <button class="primary" onclick="addBookmark()">Add Bookmark</button>
+                </div>
+            </div>
+
+            <h3 style="margin-top:20px;">My Bookmarks</h3>
+            <div id="bookmarksList"></div>
+
+            <hr class="section-divider">
+
+            <h3>Q&amp;A for this lecture</h3>
+            <div id="doubtsList"></div>
+
+            <hr class="section-divider">
+
+            <h3>Quizzes</h3>
+            <div id="quizList"></div>
+
+            <h3>Polls</h3>
+            <div id="pollList"></div>
+        </div>
+
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/student.js"></script>
+</body>
+</html>

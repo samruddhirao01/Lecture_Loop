@@ -12,37 +12,47 @@ public class Doubt {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "recording_id", nullable = false)
-    private Recording recording;
+    @JoinColumn(name = "lecture_id", nullable = false)
+    private Lecture lecture;
 
-    // The student who raised it. Only ever shown to TEACHER/ADMIN views -
-    // student-facing templates must never render this field.
+    // Real student reference -- only ever exposed to ADMIN/TEACHER via lookups,
+    // never sent to other students in API responses.
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
+    // Timestamp in the lecture video (seconds) where the doubt was raised
     @Column(nullable = false)
-    private int timestampSeconds; // position in the lecture video/audio
+    private Integer timestampSeconds;
 
-    private String comment; // optional note from the student, still anonymous to peers
+    @Column(nullable = false, length = 1000)
+    private String questionText;
+
+    @Column(length = 2000)
+    private String teacherReply;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
+
+    public Doubt() {}
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Recording getRecording() { return recording; }
-    public void setRecording(Recording recording) { this.recording = recording; }
+    public Lecture getLecture() { return lecture; }
+    public void setLecture(Lecture lecture) { this.lecture = lecture; }
 
     public User getStudent() { return student; }
     public void setStudent(User student) { this.student = student; }
 
-    public int getTimestampSeconds() { return timestampSeconds; }
-    public void setTimestampSeconds(int timestampSeconds) { this.timestampSeconds = timestampSeconds; }
+    public Integer getTimestampSeconds() { return timestampSeconds; }
+    public void setTimestampSeconds(Integer timestampSeconds) { this.timestampSeconds = timestampSeconds; }
 
-    public String getComment() { return comment; }
-    public void setComment(String comment) { this.comment = comment; }
+    public String getQuestionText() { return questionText; }
+    public void setQuestionText(String questionText) { this.questionText = questionText; }
+
+    public String getTeacherReply() { return teacherReply; }
+    public void setTeacherReply(String teacherReply) { this.teacherReply = teacherReply; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

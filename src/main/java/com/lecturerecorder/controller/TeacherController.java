@@ -1,189 +1,188 @@
 package com.lecturerecorder.controller;
 
-import com.lecturerecorder.model.Quiz;
-import com.lecturerecorder.model.Recording;
-import com.lecturerecorder.model.Section;
-import com.lecturerecorder.model.User;
-import com.lecturerecorder.service.DoubtService;
-import com.lecturerecorder.service.QuizService;
-import com.lecturerecorder.service.RecordingService;
-import com.lecturerecorder.service.SectionService;
-import com.lecturerecorder.service.UserService;
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
+import com.lecturerecorder.model.*;
+import com.lecturerecorder.repository.*;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
-@Controller
-@RequestMapping("/teacher")
+@RestController
+@RequestMapping("/api/teacher")
 public class TeacherController {
 
-    private final UserService userService;
-    private final SectionService sectionService;
-    private final RecordingService recordingService;
-    private final DoubtService doubtService;
-    private final QuizService quizService;
+    private final UserRepository userRepository;
+    private final SectionRepository sectionRepository;
+    private final LectureRepository lectureRepository;
+    private final DoubtRepository doubtRepository;
+    private final BookmarkRepository bookmarkRepository;
+    private final QuizRepository quizRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final PollRepository pollRepository;
+    private final PollVoteRepository pollVoteRepository;
 
-    public TeacherController(UserService userService, SectionService sectionService,
-                              RecordingService recordingService, DoubtService doubtService,
-                              QuizService quizService) {
-        this.userService = userService;
-        this.sectionService = sectionService;
-        this.recordingService = recordingService;
-        this.doubtService = doubtService;
-        this.quizService = quizService;
+    public TeacherController(UserRepository userRepository, SectionRepository sectionRepository,
+                             LectureRepository lectureRepository, DoubtRepository doubtRepository,
+                             BookmarkRepository bookmarkRepository, QuizRepository quizRepository,
+                             QuizAttemptRepository quizAttemptRepository, PollRepository pollRepository,
+                             PollVoteRepository pollVoteRepository) {
+        this.userRepository = userRepository;
+        this.sectionRepository = sectionRepository;
+        this.lectureRepository = lectureRepository;
+        this.doubtRepository = doubtRepository;
+        this.bookmarkRepository = bookmarkRepository;
+        this.quizRepository = quizRepository;
+        this.quizAttemptRepository = quizAttemptRepository;
+        this.pollRepository = pollRepository;
+        this.pollVoteRepository = pollVoteRepository;
     }
 
-    private User currentTeacher(Authentication auth) {
-        return userService.getByUsername(auth.getName());
+    private User currentTeacher(HttpSession session) {
+        if (!"TEACHER".equals(session.getAttribute("role"))) return null;
+        Long userId = (Long) session.getAttribute("userId");
+        return userRepository.findById(userId).orElse(null);
     }
 
-    private boolean isAssignedSection(Section section, User teacher) {
-        return section.getTeachers().stream().anyMatch(t -> t.getId().equals(teacher.getId()))
-                || (section.getTeacher() != null && section.getTeacher().getId().equals(teacher.getId()));
+    @GetMapping("/sections")
+    public ResponseEntity<?> mySections(HttpSession session) {
+        User teacher = currentTeacher(session);
+        if (teacher == null) return ResponseEntity.status(403).body(Map.of("error", "Teachers only"));
+
+        List<Map<String, Object>> result = sectionRepository.findAll().stream()
+                .filter(s -> s.getTeachers().contains(teacher))
+                .map(s -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", s.getId());
+                    m.put("name", s.getName());
+                    return m;
+                }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard(Authentication auth, Model model) {
-        User teacher = currentTeacher(auth);
-        List<Section> mySections = sectionService.getSectionsForTeacher(teacher.getId());
+    @GetMapping("/lectures")
+    public ResponseEntity<?> myLectures(HttpSession session) {
+        User teacher = currentTeacher(session);
+        if (teacher == null) return ResponseEntity.status(403).body(Map.of("error", "Teachers only"));
 
-        model.addAttribute("teacher", teacher);
-        model.addAttribute("sections", mySections);
-        model.addAttribute("recordings", recordingService.getByTeacher(teacher.getId()));
-        return "teacher-dashboard";
+        List<Map<String, Object>> result = lectureRepository.findByTeacherOrderByUploadedAtDesc(teacher).stream()
+                .map(this::lectureToMap).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/sections/{id}/roster")
-    public String roster(Authentication auth, @PathVariable Long id, Model model) {
-        Section section = sectionService.getById(id).orElse(null);
-        model.addAttribute("section", section);
-        model.addAttribute("students", section == null ? List.of() : userService.getStudentsInSection(section));
-        model.addAttribute("teacher", currentTeacher(auth));
-        return "teacher-roster";
-    }
+    @PostMapping("/lectures/upload")
+    public ResponseEntity<?> uploadLecture(@RequestParam("file") MultipartFile file,
+                                           @RequestParam("title") String title,
+                                           @RequestParam("sectionId") Long sectionId,
+                                           HttpSession session) {
+        User teacher = currentTeacher(session);
+        if (teacher == null) return ResponseEntity.status(403).body(Map.of("error", "Teachers only"));
 
-    @PostMapping("/recordings/upload")
-    public String upload(Authentication auth,
-                          @RequestParam String title,
-                          @RequestParam Long sectionId,
-                          @RequestParam MultipartFile file,
-                          Model model) throws IOException {
-        User teacher = currentTeacher(auth);
-        Section section = sectionService.getById(sectionId).orElse(null);
-        if (section != null && !file.isEmpty() && isAssignedSection(section, teacher)) {
-            recordingService.upload(file, title, section, teacher);
-        }
-        return "redirect:/teacher/dashboard";
-    }
-
-    @PostMapping("/recordings/record")
-    @ResponseBody
-    public java.util.Map<String, Object> saveBrowserRecording(
-            Authentication auth,
-            @RequestParam String title,
-            @RequestParam Long sectionId,
-            @RequestParam MultipartFile file) throws IOException {
-
-        User teacher = currentTeacher(auth);
-        Section section = sectionService.getById(sectionId).orElse(null);
-
-        if (section == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Recording or section is missing.");
-        }
-        if (!isAssignedSection(section, teacher)) {
-            throw new SecurityException("You are not assigned to this section.");
+        Optional<Section> sectionOpt = sectionRepository.findById(sectionId);
+        if (sectionOpt.isEmpty() || !sectionOpt.get().getTeachers().contains(teacher)) {
+            return ResponseEntity.status(403).body(Map.of("error", "You are not assigned to this section"));
         }
 
-        Recording recording = recordingService.uploadBrowserRecording(file, title, section, teacher);
+        try {
+            String originalName = file.getOriginalFilename();
+            String extension = (originalName != null && originalName.contains("."))
+                    ? originalName.substring(originalName.lastIndexOf('.')) : ".webm";
+            String storedName = UUID.randomUUID() + extension;
 
-        return java.util.Map.of(
-                "success", true,
-                "recordingId", recording.getId(),
-                "message", "Recording uploaded successfully."
-        );
-    }
+            Path target = Path.of("uploads", storedName);
+            Files.createDirectories(target.getParent());
+            file.transferTo(target);
 
-    @PostMapping("/recordings/{id}/delete")
-    public String deleteRecording(Authentication auth, @PathVariable Long id) throws IOException {
-        User teacher = currentTeacher(auth);
-        recordingService.deleteRecording(id, teacher.getId());
-        return "redirect:/teacher/dashboard";
-    }
+            Lecture lecture = new Lecture();
+            lecture.setTitle(title);
+            lecture.setSection(sectionOpt.get());
+            lecture.setTeacher(teacher);
+            lecture.setFileName(storedName);
+            lecture.setUploadedAt(LocalDateTime.now());
+            lectureRepository.save(lecture);
 
-    @GetMapping("/recordings/{id}/doubts")
-    public String viewDoubts(Authentication auth, @PathVariable Long id, Model model) {
-        Recording recording = recordingService.getById(id);
-        model.addAttribute("recording", recording);
-        model.addAttribute("doubts", doubtService.getDoubtsForTeacher(id));
-        model.addAttribute("hotThreshold", doubtService.getHotThreshold());
-        model.addAttribute("teacher", currentTeacher(auth));
-        return "teacher-doubts";
-    }
-
-    // ---- Quizzes / Polls ----
-
-    @GetMapping("/recordings/{recordingId}/quizzes")
-    public String quizzesForRecording(Authentication auth, @PathVariable Long recordingId, Model model) {
-        model.addAttribute("recording", recordingService.getById(recordingId));
-        model.addAttribute("quizzes", quizService.getForRecording(recordingId));
-        model.addAttribute("teacher", currentTeacher(auth));
-        return "teacher-recording-quizzes";
-    }
-
-    @GetMapping("/recordings/{recordingId}/quizzes/new")
-    public String newQuizForm(Authentication auth, @PathVariable Long recordingId, Model model) {
-        model.addAttribute("recording", recordingService.getById(recordingId));
-        model.addAttribute("teacher", currentTeacher(auth));
-        return "teacher-quiz-new";
-    }
-
-    @PostMapping("/recordings/{recordingId}/quizzes/create")
-    public String createQuiz(@PathVariable Long recordingId,
-                              @RequestParam String title,
-                              @RequestParam(defaultValue = "false") boolean poll) {
-        Recording recording = recordingService.getById(recordingId);
-        Quiz quiz = quizService.createQuiz(recording, title, poll);
-        return "redirect:/teacher/quizzes/" + quiz.getId();
-    }
-
-    @GetMapping("/quizzes/{quizId}")
-    public String manageQuiz(Authentication auth, @PathVariable Long quizId, Model model) {
-        Quiz quiz = quizService.getQuiz(quizId);
-        model.addAttribute("quiz", quiz);
-        model.addAttribute("questions", quizService.getQuestions(quizId));
-        model.addAttribute("teacher", currentTeacher(auth));
-        return "teacher-quiz-manage";
-    }
-
-    @PostMapping("/quizzes/{quizId}/questions/add")
-    public String addQuestion(@PathVariable Long quizId,
-                               @RequestParam String questionText,
-                               @RequestParam String option1,
-                               @RequestParam String option2,
-                               @RequestParam(required = false) String option3,
-                               @RequestParam(required = false) String option4,
-                               @RequestParam(required = false) Integer correctOptionIndex) {
-        Quiz quiz = quizService.getQuiz(quizId);
-        quizService.addQuestion(quiz, questionText, option1, option2, option3, option4, correctOptionIndex);
-        return "redirect:/teacher/quizzes/" + quizId;
-    }
-
-    @GetMapping("/quizzes/{quizId}/results")
-    public String quizResults(Authentication auth, @PathVariable Long quizId, Model model) {
-        Quiz quiz = quizService.getQuiz(quizId);
-        model.addAttribute("quiz", quiz);
-        model.addAttribute("questions", quizService.getQuestions(quizId));
-        model.addAttribute("teacher", currentTeacher(auth));
-        if (quiz.isPoll()) {
-            model.addAttribute("pollResults", quizService.getPollResultsDetailed(quizId));
-        } else {
-            model.addAttribute("studentScores", quizService.getAllStudentScores(quizId));
+            return ResponseEntity.ok(lectureToMap(lecture));
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to save recording: " + e.getMessage()));
         }
-        return "teacher-quiz-results";
+    }
+
+    @DeleteMapping("/lectures/{id}")
+    public ResponseEntity<?> deleteLecture(@PathVariable Long id, HttpSession session) {
+        User teacher = currentTeacher(session);
+        if (teacher == null) return ResponseEntity.status(403).body(Map.of("error", "Teachers only"));
+
+        Optional<Lecture> lectureOpt = lectureRepository.findById(id);
+        if (lectureOpt.isEmpty() || !lectureOpt.get().getTeacher().getId().equals(teacher.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Not your lecture"));
+        }
+
+        Lecture lecture = lectureOpt.get();
+
+        // A lecture can have doubts, bookmarks, quizzes, and polls all pointing
+        // back to it with required foreign keys. Clean those up first, in
+        // dependency order, or the final delete gets silently rejected by the DB.
+        doubtRepository.deleteAll(doubtRepository.findByLectureOrderByTimestampSecondsAsc(lecture));
+        bookmarkRepository.deleteAll(bookmarkRepository.findByLecture(lecture));
+
+        for (Quiz quiz : quizRepository.findByLectureOrderByCreatedAtAsc(lecture)) {
+            quizAttemptRepository.deleteAll(quizAttemptRepository.findByQuiz(quiz));
+            quizRepository.delete(quiz); // cascades quiz options automatically
+        }
+        for (Poll poll : pollRepository.findByLectureOrderByCreatedAtAsc(lecture)) {
+            pollVoteRepository.deleteAll(pollVoteRepository.findByPoll(poll));
+            pollRepository.delete(poll); // cascades poll options automatically
+        }
+
+        // Remove the video file from disk too, not just the DB row.
+        try {
+            Files.deleteIfExists(Path.of("uploads", lecture.getFileName()));
+        } catch (IOException ignored) {
+            // If the file is already gone for some reason, don't block the DB delete.
+        }
+        lectureRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Lecture deleted"));
+    }
+
+    @GetMapping("/lectures/{id}/doubts")
+    public ResponseEntity<?> doubtsForLecture(@PathVariable Long id, HttpSession session) {
+        User teacher = currentTeacher(session);
+        if (teacher == null) return ResponseEntity.status(403).body(Map.of("error", "Teachers only"));
+
+        Optional<Lecture> lectureOpt = lectureRepository.findById(id);
+        if (lectureOpt.isEmpty() || !lectureOpt.get().getTeacher().getId().equals(teacher.getId())) {
+            return ResponseEntity.status(403).body(Map.of("error", "Not your lecture"));
+        }
+
+        List<Map<String, Object>> result = doubtRepository.findByLectureOrderByTimestampSecondsAsc(lectureOpt.get())
+                .stream().map(d -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", d.getId());
+                    m.put("anonId", d.getStudent().getAnonId());
+                    m.put("realUsername", d.getStudent().getUsername()); // teacher CAN resolve identity
+                    m.put("realFullName", d.getStudent().getFullName());
+                    m.put("timestampSeconds", d.getTimestampSeconds());
+                    m.put("questionText", d.getQuestionText());
+                    m.put("teacherReply", d.getTeacherReply());
+                    return m;
+                }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    private Map<String, Object> lectureToMap(Lecture lecture) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", lecture.getId());
+        m.put("title", lecture.getTitle());
+        m.put("section", lecture.getSection().getName());
+        m.put("videoUrl", "/uploads/" + lecture.getFileName());
+        m.put("uploadedAt", lecture.getUploadedAt().toString());
+        m.put("doubtCount", doubtRepository.findByLectureOrderByTimestampSecondsAsc(lecture).size());
+        return m;
     }
 }

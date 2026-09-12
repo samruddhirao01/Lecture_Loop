@@ -12,33 +12,33 @@ public class Bookmark {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "recording_id", nullable = false)
-    private Recording recording;
+    @JoinColumn(name = "lecture_id", nullable = false)
+    private Lecture lecture;
 
-    // Private to this student - never shown to anyone else, not even the teacher.
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
     @Column(nullable = false)
-    private int timestampSeconds;
+    private Integer timestampSeconds;
 
+    @Column(length = 500)
     private String note;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Recording getRecording() { return recording; }
-    public void setRecording(Recording recording) { this.recording = recording; }
+    public Lecture getLecture() { return lecture; }
+    public void setLecture(Lecture lecture) { this.lecture = lecture; }
 
     public User getStudent() { return student; }
     public void setStudent(User student) { this.student = student; }
 
-    public int getTimestampSeconds() { return timestampSeconds; }
-    public void setTimestampSeconds(int timestampSeconds) { this.timestampSeconds = timestampSeconds; }
+    public Integer getTimestampSeconds() { return timestampSeconds; }
+    public void setTimestampSeconds(Integer timestampSeconds) { this.timestampSeconds = timestampSeconds; }
 
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
