@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teacher Dashboard - Lecture Recorder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        if (localStorage.getItem('lr-theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+</head>
+<body>
+    <div class="topbar">
+        <h1>Teacher Dashboard <span class="badge">TEACHER</span></h1>
+        <div>
+            <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>Record a Lecture</h2>
+            <label>Section</label>
+            <select id="sectionSelect"></select>
+
+            <label>Lecture Title</label>
+            <input type="text" id="lectureTitle" placeholder="e.g. Unit 3 - Sorting Algorithms">
+
+            <div style="margin-top:14px;">
+                <button class="record-btn" id="startBtn" onclick="startRecording()">Start Recording</button>
+                <button class="record-btn stop" id="stopBtn" onclick="stopRecording()" disabled>Stop Recording</button>
+                <span id="recordTimer" style="font-weight:700; color:var(--accent); margin-left:6px;"></span>
+            </div>
+
+            <p style="font-size:12px; color:var(--ink-faint); margin-top:10px;">
+                This captures your screen (e.g. digital board / Paint / slides) plus your microphone.
+                When you click stop, it uploads and saves automatically to the selected section.
+            </p>
+
+            <video id="preview" style="margin-top:10px; display:none;" controls></video>
+            <div class="error-msg" id="recordError"></div>
+            <div id="uploadStatus" style="font-size:13px; color:var(--primary-dark); margin-top:8px; font-weight:600;"></div>
+        </div>
+
+        <div class="card">
+            <h2>My Uploaded Lectures</h2>
+            <table id="lecturesTable">
+                <thead><tr><th>Title</th><th>Section</th><th>Uploaded</th><th>Doubts</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card" id="workspaceCard" style="display:none;">
+            <h2>Lecture Workspace: <span id="workspaceLectureTitle"></span></h2>
+
+            <video id="workspacePlayer" controls style="margin-bottom:14px;"></video>
+
+            <h3>Doubts &amp; Confusion Graph</h3>
+            <div class="heatmap-wrap">
+                <div class="heatmap-label">Where students got confused (click the graph to jump there)</div>
+                <div id="heatmapBar"></div>
+            </div>
+            <div id="doubtsList"></div>
+
+            <hr class="section-divider">
+
+            <h3>Quizzes</h3>
+            <div id="quizCreateForm">
+                <label>Question</label>
+                <input type="text" id="quizQuestion" placeholder="e.g. What is the time complexity of binary search?">
+                <label>Options (mark the correct one)</label>
+                <div id="quizOptionsInputs"></div>
+                <button class="secondary" onclick="addQuizOptionInput()">+ Add Option</button>
+                <button class="primary" onclick="createQuiz()">Create Quiz</button>
+                <div class="error-msg" id="quizError"></div>
+            </div>
+            <div id="quizList" style="margin-top:16px;"></div>
+
+            <hr class="section-divider">
+
+            <h3>Polls</h3>
+            <div id="pollCreateForm">
+                <label>Question</label>
+                <input type="text" id="pollQuestion" placeholder="e.g. How confident do you feel about this topic?">
+                <label>Options</label>
+                <div id="pollOptionsInputs"></div>
+                <button class="secondary" onclick="addPollOptionInput()">+ Add Option</button>
+                <button class="primary" onclick="createPoll()">Create Poll</button>
+                <div class="error-msg" id="pollError"></div>
+            </div>
+            <div id="pollList" style="margin-top:16px;"></div>
+        </div>
+
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/heatmap.js"></script>
+    <script src="js/teacher.js"></script>
+</body>
+</html>

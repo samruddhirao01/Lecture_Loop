@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "quizzes")
-public class Quiz {
+@Table(name = "polls")
+public class Poll {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,8 +20,8 @@ public class Quiz {
     @Column(nullable = false, length = 500)
     private String question;
 
-    @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<QuizOption> options = new ArrayList<>();
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PollOption> options = new ArrayList<>();
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -35,8 +35,8 @@ public class Quiz {
     public String getQuestion() { return question; }
     public void setQuestion(String question) { this.question = question; }
 
-    public List<QuizOption> getOptions() { return options; }
-    public void setOptions(List<QuizOption> options) { this.options = options; }
+    public List<PollOption> getOptions() { return options; }
+    public void setOptions(List<PollOption> options) { this.options = options; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

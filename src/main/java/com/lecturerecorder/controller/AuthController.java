@@ -1,83 +1,125 @@
 package com.lecturerecorder.controller;
 
+import com.lecturerecorder.model.Role;
 import com.lecturerecorder.model.Section;
-import com.lecturerecorder.service.SectionService;
-import com.lecturerecorder.service.UserService;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.lecturerecorder.model.User;
+import com.lecturerecorder.repository.SectionRepository;
+import com.lecturerecorder.repository.UserRepository;
+import com.lecturerecorder.util.AnonIdGenerator;
+import com.lecturerecorder.util.PasswordUtil;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserService userService;
-    private final SectionService sectionService;
+    private final UserRepository userRepository;
+    private final SectionRepository sectionRepository;
 
-    public AuthController(UserService userService, SectionService sectionService) {
-        this.userService = userService;
-        this.sectionService = sectionService;
+    public AuthController(UserRepository userRepository, SectionRepository sectionRepository) {
+        this.userRepository = userRepository;
+        this.sectionRepository = sectionRepository;
     }
 
-    @GetMapping("/login")
-    public String loginPage() {
-        return "login";
-    }
-
-    @GetMapping("/register")
-    public String registerPage(Model model) {
-        model.addAttribute("sections", sectionService.getAll());
-        return "register";
-    }
-
+    // Public self-registration for students. Account is created but marked
+    // unverified -- admin has to approve it before the student can log in.
     @PostMapping("/register")
-    public String register(@RequestParam String username,
-                            @RequestParam String password,
-                            @RequestParam String fullName,
-                            @RequestParam String rollNumber,
-                            @RequestParam Long sectionId,
-                            Model model) {
-
-        Section section = sectionService.getById(sectionId).orElse(null);
-        if (section == null) {
-            model.addAttribute("error", "Please choose a valid class/section.");
-            model.addAttribute("sections", sectionService.getAll());
-            return "register";
+    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
+        String username = body.get("username");
+        if (username == null || username.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Username required"));
+        }
+        if (userRepository.findByUsername(username).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
         }
 
-        String error = userService.registerStudent(username, password, fullName, rollNumber, section);
-        if (error != null) {
-            model.addAttribute("error", error);
-            model.addAttribute("sections", sectionService.getAll());
-            return "register";
+        Long sectionId;
+        try {
+            sectionId = Long.valueOf(body.get("sectionId"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Select a section"));
+        }
+        Optional<Section> sectionOpt = sectionRepository.findById(sectionId);
+        if (sectionOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Section not found"));
         }
 
-        return "redirect:/login?registered";
+        User student = new User();
+        student.setUsername(username);
+        student.setPasswordHash(PasswordUtil.hash(body.get("password")));
+        student.setFullName(body.get("fullName"));
+        student.setRole(Role.STUDENT);
+        student.setSection(sectionOpt.get());
+        student.setRollNumber(body.get("rollNumber"));
+        student.setAnonId(AnonIdGenerator.generate(userRepository));
+        student.setVerified(false); // pending admin approval
+        userRepository.save(student);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Registered. Your account is pending admin verification before you can log in."
+        ));
     }
 
-    // ---- Forgot password (students only - self-service via roll number) ----
-
-    @GetMapping("/forgot-password")
-    public String forgotPasswordPage() {
-        return "forgot-password";
+    // Public - needed so the self-registration page can show a section dropdown
+    @GetMapping("/public-sections")
+    public ResponseEntity<?> publicSections() {
+        return ResponseEntity.ok(sectionRepository.findAll().stream()
+                .map(s -> Map.of("id", s.getId(), "name", s.getName()))
+                .toList());
     }
 
-    @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String username,
-                                  @RequestParam String rollNumber,
-                                  @RequestParam String newPassword,
-                                  @RequestParam String confirmPassword,
-                                  Model model) {
-        if (!newPassword.equals(confirmPassword)) {
-            model.addAttribute("error", "New password and confirm password don't match.");
-            return "forgot-password";
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpSession session) {
+        String username = body.get("username");
+        String password = body.get("password");
+
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty() || !PasswordUtil.matches(password, userOpt.get().getPasswordHash())) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid username or password"));
         }
-        String error = userService.resetStudentPassword(username, rollNumber, newPassword);
-        if (error != null) {
-            model.addAttribute("error", error);
-            return "forgot-password";
+
+        User user = userOpt.get();
+        if (!user.isVerified()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Your account is pending admin verification"));
         }
-        return "redirect:/login?resetdone";
+
+        session.setAttribute("userId", user.getId());
+        session.setAttribute("role", user.getRole().name());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("role", user.getRole().name());
+        response.put("fullName", user.getFullName());
+        response.put("username", user.getUsername());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpSession session) {
+        session.invalidate();
+        return ResponseEntity.ok(Map.of("message", "Logged out"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> me(HttpSession session) {
+        Object userId = session.getAttribute("userId");
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
+        }
+        Optional<User> userOpt = userRepository.findById((Long) userId);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
+        }
+        User user = userOpt.get();
+        Map<String, Object> response = new HashMap<>();
+        response.put("role", user.getRole().name());
+        response.put("fullName", user.getFullName());
+        response.put("username", user.getUsername());
+        return ResponseEntity.ok(response);
     }
 }

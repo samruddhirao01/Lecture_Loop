@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Lecture Recorder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        if (localStorage.getItem('lr-theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+</head>
+<body>
+    <div class="topbar">
+        <h1>Admin Panel <span class="badge">ADMIN</span></h1>
+        <div>
+            <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()">🌙</button>
+            <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>Sections</h2>
+            <label>New section name (e.g. TY-A, SY-B, FY-A)</label>
+            <input type="text" id="sectionName" placeholder="TY-A">
+            <button class="primary" onclick="createSection()">Add Section</button>
+            <table id="sectionsTable">
+                <thead><tr><th>Name</th><th>Teachers</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Teachers</h2>
+            <label>Username</label>
+            <input type="text" id="teacherUsername" placeholder="teacher.smith">
+            <label>Full Name</label>
+            <input type="text" id="teacherFullName" placeholder="Mrs. Smith">
+            <label>Password</label>
+            <input type="password" id="teacherPassword" placeholder="Password">
+            <button class="primary" onclick="createTeacher()">Add Teacher</button>
+            <table id="teachersTable">
+                <thead><tr><th>Username</th><th>Full Name</th><th>Assign Sections</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card" id="pendingCard" style="display:none;">
+            <h2>Pending Student Verifications</h2>
+            <table id="pendingTable">
+                <thead><tr><th>MID</th><th>Name</th><th>Roll No.</th><th>Section</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Students</h2>
+            <label>MID (College ID)</label>
+            <input type="text" id="studentUsername" placeholder="e.g. 18544">
+            <label>Full Name</label>
+            <input type="text" id="studentFullName" placeholder="Student full name">
+            <label>Password</label>
+            <input type="password" id="studentPassword" placeholder="Password">
+            <label>Section</label>
+            <select id="studentSection"></select>
+            <button class="primary" onclick="createStudent()">Add Student</button>
+            <table id="studentsTable">
+                <thead><tr><th>MID</th><th>Name</th><th>Roll No.</th><th>Section</th><th>Anon ID</th><th></th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

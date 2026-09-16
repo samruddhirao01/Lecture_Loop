@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - Lecture Recorder</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        if (localStorage.getItem('lr-theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
+</head>
+<body>
+    <button class="theme-toggle standalone" id="themeToggleBtn" onclick="toggleTheme()">🌙</button>
+
+    <div class="login-box" style="max-width:420px;">
+        <h1>Student Registration</h1>
+        <p class="subtitle">Your account needs admin approval before you can log in</p>
+
+        <label>MID (College ID)</label>
+        <input type="text" id="username" placeholder="e.g. 18544">
+
+        <label>Full Name</label>
+        <input type="text" id="fullName" placeholder="Your full name">
+
+        <label>Roll Number</label>
+        <input type="text" id="rollNumber" placeholder="e.g. 45">
+
+        <label>Section</label>
+        <select id="sectionId"></select>
+
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Choose a password">
+
+        <button class="primary" style="width:100%;" onclick="register()">Register</button>
+        <div class="error-msg" id="error"></div>
+        <div class="success-msg" id="success"></div>
+
+        <div class="links">
+            Already have an account? <a href="index.html">Back to login</a>
+        </div>
+    </div>
+
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/register.js"></script>
+</body>
+</html>
